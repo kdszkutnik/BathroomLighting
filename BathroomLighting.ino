@@ -59,41 +59,34 @@ class Dimmer {
     }
 
     int SetBrightness () {
-      if(machineState == 1) {
+      if(machineState == 1) { // 1: dimming ongoing
         delay(1);
-        if(brightnessValue < 50) {
-          brightnessValue++;
-        } else {
-          brightnessValue = brightnessValue + 5;
-        }
+        brightnessValue++;
+        brightnessValue = brightnessValue + brightnessValue;
+        
+
         if(brightnessValue>=255) {
           brightnessValue=255;
           machineState = 2;
         }
       }
 
-      if(machineState == 2) {
+      if(machineState == 2) { // 2:led on
         delay(1);
         tonTimerValue++;
-        if(tonTimerValue > 50) {
+        if(tonTimerValue > 600) {
           machineState = 3;
           tonTimerValue = 0;
         }
       }
 
-      if(machineState == 3) {
+      if(machineState == 3) { // 3: dimming offgoing
         delay(1);
-        if(brightnessValue < 50) {
-          brightnessValue--;
-        } else {
-          brightnessValue = brightnessValue - 5;
-        }
+        brightnessValue--;
+        
         if(brightnessValue<=0) {
           brightnessValue=0;
           machineState = 0;
-        }
-        if(_motionDetected) {
-          machineState = 1;
         }
       }
       
