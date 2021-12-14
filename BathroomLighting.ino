@@ -44,27 +44,27 @@ class Dimmer {
     int update(bool motionDetected) {
       int moduloResult;
       moduloResult = millis() % 100;
-
       _motionDetected = motionDetected;
       
       if(moduloResult == 0) {
         SetBrightness();
-      }
-
-      if(_motionDetected){
-        machineState = 1;
       }
       
       return brightnessValue;
     }
 
     int SetBrightness () {
+      if(machineState == 0) { // 0: led off
+        if(_motionDetected){
+          machineState = 1;
+        }
+      }
+            
       if(machineState == 1) { // 1: dimming ongoing
         delay(1);
         brightnessValue++;
         brightnessValue = brightnessValue + brightnessValue;
         
-
         if(brightnessValue>=255) {
           brightnessValue=255;
           machineState = 2;
@@ -76,6 +76,10 @@ class Dimmer {
         tonTimerValue++;
         if(tonTimerValue > 600) {
           machineState = 3;
+          tonTimerValue = 0;
+        }
+
+        if(_motionDetected){
           tonTimerValue = 0;
         }
       }
