@@ -1,6 +1,27 @@
 #include "Arduino.h"
 #include "LowPower.h"
 
+class PowerMgr
+{
+  private:
+    int _ledPin;
+
+  public:
+    PowerMgr(int ledPin) {
+      _ledPin = ledPin;
+      pinMode(_ledPin, OUTPUT);
+    }
+
+    void update(int pirSensorValue, int machineState) {
+      if(pirSensorValue == 0 && machineState == 0)
+        {
+          digitalWrite(_ledPin, HIGH);
+          LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF);
+        }
+        digitalWrite(_ledPin, LOW);
+    }
+};
+
 class PirSensor
 {
   private:
@@ -8,31 +29,12 @@ class PirSensor
   
   public:
     PirSensor(int pin) {
-      pinMode(pin, INPUT);
+      pinMode(pin, INPUT_PULLUP);
       _pin = pin;
     }
     
     bool read() {
       return digitalRead(_pin);
-    }
-};
-
-class PowerMgm
-{
-  private:
-  
-  public:
-    PowerMgm(int wakeUpPin) {
-      pinMode(wakeUpPin, INPUT);   
-      attachInterrupt(wakeUpPin, this->wakeUp, RISING);
-    }
-
-    void goLowPower(void) {
-      LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
-    }
-    
-    static void wakeUp(void) {
-      return;
     }
 };
 
@@ -125,8 +127,8 @@ class Dimmer {
 
 PirSensor pirSensor(2);
 LedStrip ledStrip(3);
+PowerMgr powerMgr(17);
 Dimmer dimmer;
-PowerMgm powerMgm(2);
 bool pirSensorValue;
 byte brightness;
 int machineState;
@@ -140,10 +142,6 @@ void loop() {
   brightness = dimmer.update(pirSensorValue);
   ledStrip.setBrightness(brightness);
   machineState = dimmer.getMachineState();
-  if(machineState == 0) {
-    Serial.print("I'm going sleep!");
-    //powerMgm.goLowPower();
-  }
 
   Serial.print("pirSensorValue: ");
   Serial.print(pirSensorValue);
@@ -153,4 +151,6 @@ void loop() {
 
   Serial.print(" machineState: ");
   Serial.println(machineState);
+
+  powerMgr.update(pirSensorValue, machineState);
 }
