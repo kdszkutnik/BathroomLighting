@@ -1,3 +1,6 @@
+//Needed libraries: 
+//LowPowerLab/LowPower
+
 #include "Arduino.h"
 #include "LowPower.h"
 
@@ -38,6 +41,22 @@ class PirSensor
     }
 };
 
+class UsbChargeDetector
+{
+  private:
+    int _pin;
+  
+  public:
+    UsbChargeDetector(int pin) {
+      pinMode(pin, INPUT);
+      _pin = pin;
+    }
+    
+    bool read() {
+      return digitalRead(_pin);
+    }
+};
+
 class LedStrip
 {
   private:
@@ -61,12 +80,14 @@ class Dimmer {
     bool _motionDetected;
     int tonTimerValue;
     int machineState; // 0: led off // 1: dimming ongoing // 2:led on // 3: dimming offgoing
+    bool _chargerConnected;
     
   public:
-    int update(bool motionDetected) {
+    int update(bool motionDetected, bool chargerConnected) {
       int moduloResult;
       moduloResult = millis() % 100;
       _motionDetected = motionDetected;
+      _chargerConnected = chargerConnected;
       
       if(moduloResult == 0) {
         SetBrightness();
@@ -77,7 +98,7 @@ class Dimmer {
 
     int SetBrightness () {
       if(machineState == 0) { // 0: led off
-        if(_motionDetected){
+        if(_motionDetected && !_chargerConnected){
           machineState = 1;
         }
       }
@@ -95,7 +116,7 @@ class Dimmer {
       if(machineState == 2) { // 2:led on
         delay(1);
         tonTimerValue++;
-        if(tonTimerValue > 200) {
+        if(tonTimerValue > 200 || _chargerConnected) {
           machineState = 3;
           tonTimerValue = 0;
         }
@@ -128,10 +149,13 @@ class Dimmer {
 PirSensor pirSensor(2);
 LedStrip ledStrip(3);
 PowerMgr powerMgr(17);
+UsbChargeDetector usbChargeDetector(4);
 Dimmer dimmer;
 bool pirSensorValue;
 byte brightness;
 int machineState;
+bool usbChargeActive;
+
 
 void setup() {
   Serial.begin(9600);
@@ -139,7 +163,8 @@ void setup() {
 
 void loop() {
   pirSensorValue = pirSensor.read();
-  brightness = dimmer.update(pirSensorValue);
+  usbChargeActive = usbChargeDetector.read();
+  brightness = dimmer.update(pirSensorValue, usbChargeActive);
   ledStrip.setBrightness(brightness);
   machineState = dimmer.getMachineState();
 
@@ -150,7 +175,10 @@ void loop() {
   Serial.print(brightness);
 
   Serial.print(" machineState: ");
-  Serial.println(machineState);
+  Serial.print(machineState);
+
+  Serial.print(" usbPlugDetector: ");
+  Serial.println(usbChargeActive);
 
   powerMgr.update(pirSensorValue, machineState);
 }
